@@ -89,6 +89,10 @@ def post_to_plato(board_name, title):
         # 로그인 성공 여부 확인
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "page-footer")))
         print("✅ 로그인 성공")
+        # 로그인 이후, 클릭 전 화면 저장
+        driver.save_screenshot("after_login.png")
+        with open("after_login.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
 
         # 메인 페이지에서 게시판 이동
         print("🎯 '음악학과 연습실 예약' 클릭 시도 중...")
