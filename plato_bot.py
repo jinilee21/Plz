@@ -77,9 +77,19 @@ def post_to_plato(forum_id, title):
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
         driver.get("https://plato.pusan.ac.kr/")
 
-        driver.find_element(By.ID, "userid").send_keys(PLATO_ID)
-        driver.find_element(By.ID, "passwd").send_keys(PLATO_PW)
-        driver.find_element(By.ID, "loginbtn").click()
+        # 로그인 입력칸 로딩 대기
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.ID, "userid"))
+        )
+
+        try:
+            driver.find_element(By.ID, "userid").send_keys(PLATO_ID)
+            driver.find_element(By.ID, "passwd").send_keys(PLATO_PW)
+            driver.find_element(By.ID, "loginbtn").click()
+        except Exception as e:
+            print("❌ 로그인 입력칸 찾기 실패:", e)
+            driver.save_screenshot("login_error.png")
+            return
         time.sleep(3)
 
         forum_url = f"https://plato.pusan.ac.kr/mod/forum/view.php?id={str(forum_id)}"
