@@ -64,9 +64,9 @@ titles_today = title_map.get(weekday, [])
 # ----------------------------
 # 13시까지 대기
 # ----------------------------
-while datetime.now().hour < 13:
-    print("🕒 대기 중...", datetime.now().strftime("%H:%M:%S"))
-    time.sleep(10)
+#while datetime.now().hour < 13:
+ #   print("🕒 대기 중...", datetime.now().strftime("%H:%M:%S"))
+ #   time.sleep(10)
 
 # ----------------------------
 # 게시글 작성 함수
