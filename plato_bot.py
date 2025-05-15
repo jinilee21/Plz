@@ -102,8 +102,8 @@ def post_to_plato(forum_id, title):
         except:
             print("❌ 로그인 실패: 아이디 또는 비밀번호가 잘못됐거나, 페이지 로딩 실패")
             driver.save_screenshot("login_failed.png")
-            driver.quit()
             return
+
         # 게시판 진입
         forum_url = f"https://plato.pusan.ac.kr/mod/forum/view.php?id={forum_id}"
         driver.get(forum_url)
@@ -129,6 +129,7 @@ def post_to_plato(forum_id, title):
             print("❌ 제목 입력 실패:", e)
             driver.save_screenshot("subject_error.png")
             return
+
         # 본문 작성 (간단히 마침표)
         try:
             driver.execute_script("document.getElementById('id_content').value = '.'")
@@ -137,19 +138,27 @@ def post_to_plato(forum_id, title):
             print("❌ 본문 입력 실패 (JS):", e)
             driver.save_screenshot("content_error.png")
             return
+
         # 게시 클릭
         try:
             driver.find_element(By.ID, "id_submitbutton").click()
             print(f"✅ 게시 완료: {title}")
-
         except Exception as e:
             print("❌ 제출 버튼 클릭 실패:", e)
             driver.save_screenshot("submit_error.png")
             with open("submit_page_source.html", "w", encoding="utf-8") as f:
                 f.write(driver.page_source)
-        finally:
-            if driver:
-                driver.quit()
+            return
+
+    except Exception as e:
+        print("❌ 전체 try 블록 오류:", e)
+        if driver:
+            driver.save_screenshot("fatal_error.png")
+
+    finally:
+        if driver:
+            driver.quit()
+
 
 # ----------------------------
 # 오늘의 게시글들 반복 업로드
