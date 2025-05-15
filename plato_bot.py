@@ -83,9 +83,9 @@ def post_to_plato(forum_id, title):
         )
 
         try:
-            driver.find_element(By.ID, "userid").send_keys(PLATO_ID)
-            driver.find_element(By.ID, "passwd").send_keys(PLATO_PW)
-            driver.find_element(By.ID, "loginbtn").click()
+            driver.find_element(By.ID, "input-username").send_keys(PLATO_ID)
+            driver.find_element(By.ID, "input-password").send_keys(PLATO_PW)
+            driver.find_element(By.ID, "loginbutton").click()
         except Exception as e:
             print("❌ 로그인 입력칸 찾기 실패:", e)
             driver.save_screenshot("login_error.png")
