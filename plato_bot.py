@@ -74,10 +74,10 @@ def prepare_and_post(board_name, title):
         driver.execute_script("arguments[0].scrollIntoView(true);", link)
         driver.execute_script("arguments[0].click();", link)
 
-        # 게시판 이름이 들어간 span 태그 찾기
-        board_xpath = f"//span[@class='instancename' and contains(text(), '{board_name}')]"
+        # 게시판 span 찾기 (정확히 일치)
+        board_xpath = f"//span[@class='instancename' and starts-with(normalize-space(text()[1]), '{board_name}')]"
         board_elem = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.XPATH, board_xpath))
+            EC.presence_of_element_located((By.XPATH, board_xpath))
         )
 
         # span 태그의 상위 a 태그 클릭
