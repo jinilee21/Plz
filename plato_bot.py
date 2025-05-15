@@ -141,11 +141,14 @@ def prepare_and_post(board_name, title):
         driver.execute_script("document.getElementById('id_content').value = '.'")
 
         # 서버 기준 목표 제출 시간 (예: 한국 시간 13:00 == UTC 04:00)
-        target_utc_time = datetime.combine(
-            datetime.utcnow().date(),
-            dtime(4, 0, 0),  # 13시 KST = 04시 UTC
-            tzinfo=timezone.utc
-        )
+        #target_utc_time = datetime.combine(
+            #datetime.utcnow().date(),
+            #dtime(4, 0, 0),  # 13시 KST = 04시 UTC
+            #tzinfo=timezone.utc
+        #)
+        server_now = get_plato_server_time()
+        target_utc_time = server_now + timedelta(minutes=1)
+
         wait_until_server_target_time(target_utc_time)
 
         driver.find_element(By.ID, "id_submitbutton").click()
