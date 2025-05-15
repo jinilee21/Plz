@@ -100,9 +100,9 @@ def prepare_and_wait_post(board_name, title):
         driver.execute_script("document.getElementById('id_content').value = '.'")
 
         # 🕒 서버 시간 13시까지 대기 (UTC 기준)
-        print("⏳ 제출 대기 중 (서버 시간 기준 13시)...")
-        while datetime.utcnow().hour != 13:
-            time.sleep(0.5)
+        #print("⏳ 제출 대기 중 (서버 시간 기준 13시)...")
+        #while datetime.utcnow().hour != 13:
+        #    time.sleep(0.5)
 
         # 제출
         driver.find_element(By.ID, "id_submitbutton").click()
