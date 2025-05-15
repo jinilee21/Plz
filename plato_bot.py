@@ -4,9 +4,11 @@ from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 # ----------------------------
-# 게시글 제목 목록 (요일별)
+# 요일별 게시판 ID + 제목 리스트
 # ----------------------------
 title_map = {
     "Monday": [
@@ -39,7 +41,7 @@ title_map = {
 }
 
 # ----------------------------
-# 크롬 헤드리스 브라우저 설정
+# Chrome 옵션 설정
 # ----------------------------
 chrome_options = Options()
 chrome_options.add_argument("--headless")
@@ -47,13 +49,13 @@ chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 
 # ----------------------------
-# 로그인 정보 (환경변수에서 불러옴)
+# 로그인 정보 (GitHub Secrets)
 # ----------------------------
 PLATO_ID = os.getenv("PLATO_ID")
 PLATO_PW = os.getenv("PLATO_PW")
 
 # ----------------------------
-# 오늘의 게시글 제목 추출
+# 오늘의 요일에 해당하는 제목 리스트
 # ----------------------------
 now = datetime.now()
 weekday = now.strftime("%A")
@@ -67,45 +69,41 @@ while datetime.now().hour < 13:
     time.sleep(10)
 
 # ----------------------------
-# 게시글 업로드 함수 (재시도 + 로그 저장)
+# 게시글 작성 함수
 # ----------------------------
-def post_to_plato(title):
-    for attempt in range(3):
-        try:
-            driver = webdriver.Chrome(options=chrome_options)
-            driver.get("https://plato.pusan.ac.kr/")
+def post_to_plato(forum_id, title):
+    driver = None
+    try:
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        driver.get("https://plato.pusan.ac.kr/")
 
-            driver.find_element(By.ID, "userid").send_keys(PLATO_ID)
-            driver.find_element(By.ID, "passwd").send_keys(PLATO_PW)
-            driver.find_element(By.ID, "loginbtn").click()
-            time.sleep(3)
+        driver.find_element(By.ID, "userid").send_keys(PLATO_ID)
+        driver.find_element(By.ID, "passwd").send_keys(PLATO_PW)
+        driver.find_element(By.ID, "loginbtn").click()
+        time.sleep(3)
 
-            forum_url = f"https://plato.pusan.ac.kr/mod/forum/view.php?id=123456"  # 수정 필요
-            driver.get(forum_url)
-            time.sleep(2)
+        forum_url = f"https://plato.pusan.ac.kr/mod/forum/view.php?id={str(forum_id)}"
+        driver.get(forum_url)
+        time.sleep(2)
 
-            driver.find_element(By.LINK_TEXT, "새 토론 주제 추가").click()
-            time.sleep(2)
+        driver.find_element(By.LINK_TEXT, "새 토론 주제 추가").click()
+        time.sleep(2)
 
-            driver.find_element(By.ID, "id_subject").send_keys(title)
-            driver.find_element(By.ID, "id_messageeditable").send_keys(".")
-            driver.find_element(By.ID, "id_submitbutton").click()
+        driver.find_element(By.ID, "id_subject").send_keys(title)
+        driver.find_element(By.ID, "id_messageeditable").send_keys(".")
+        driver.find_element(By.ID, "id_submitbutton").click()
 
-            print(f"✅ 게시 완료: {title}")
-            with open(f'logs/{weekday}_{now.date()}.log', 'a') as log_file:
-                log_file.write(f'{datetime.now()} - 게시 성공: {title}\n')
+        print(f"✅ 게시 완료: {title}")
+
+    except Exception as e:
+        print(f"❌ 오류 발생: {e}")
+
+    finally:
+        if driver:
             driver.quit()
-            break
-        except Exception as e:
-            print(f"❌ 오류 발생: {title}, 시도 {attempt + 1}, 오류: {e}")
-            time.sleep(5)
-            driver.quit()
-            if attempt == 2:
-                with open(f'logs/{weekday}_{now.date()}.log', 'a') as log_file:
-                    log_file.write(f'{datetime.now()} - 게시 실패: {title} - 오류: {e}\n')
 
 # ----------------------------
-# 오늘 제목 리스트 반복 처리
+# 오늘의 게시글들 업로드
 # ----------------------------
-for _, title in titles_today:
-    post_to_plato(title)
+for forum_id, title in titles_today:
+    post_to_plato(forum_id, title)
