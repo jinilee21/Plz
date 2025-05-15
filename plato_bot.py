@@ -147,7 +147,6 @@ def post_to_plato(forum_id, title):
             driver.save_screenshot("submit_error.png")
             with open("submit_page_source.html", "w", encoding="utf-8") as f:
                 f.write(driver.page_source)
-            return
         finally:
             if driver:
                 driver.quit()
