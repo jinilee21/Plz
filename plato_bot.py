@@ -93,13 +93,26 @@ def post_to_plato(forum_id, title):
 
         time.sleep(3)
 
+        # ✅ 로그인 성공 확인
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "page-footer"))  # 또는 사용자 메뉴의 ID
+            )
+            print("✅ 로그인 성공")
+        except:
+            print("❌ 로그인 실패: 아이디 또는 비밀번호가 잘못됐거나, 페이지 로딩 실패")
+            driver.save_screenshot("login_failed.png")
+            driver.quit()
+            return
         # 게시판 진입
         forum_url = f"https://plato.pusan.ac.kr/mod/forum/view.php?id={forum_id}"
         driver.get(forum_url)
         time.sleep(2)
 
         # "쓰기" 버튼 클릭
-        driver.find_element(By.LINK_TEXT, "쓰기").click()
+        WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((By.CSS_SELECTOR, "a.btn.btn-primary"))
+).click()
         time.sleep(2)
 
         # 제목 입력
