@@ -12,21 +12,17 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # ----------------------------
-# 요일별 게시판명 + 제목 리스트
+# 요일별 게시판명 + 제목 리스트 (한국 시간 기준으로 판별)
 # ----------------------------
 title_map = {
     "Monday": [("216호 연습실 예약", "202465133 피아노 최윤정 16-20"), ("208호 연습실 예약", "202465133 피아노 최윤정 12-15")],
     "Tuesday": [("216호 연습실 예약", "202465133 피아노 최윤정 15-19"), ("208호 연습실 예약", "202465133 피아노 최윤정 19-22")],
     "Wednesday": [("216호 연습실 예약", "202465133 피아노 최윤정 11:20-15"), ("208호 연습실 예약", "202465133 피아노 최윤정 16-20")],
     "Thursday": [("216호 연습실 예약", "202465133 피아노 최윤정 12-16"), ("208호 연습실 예약", "202465133 피아노 최윤정 16-20")],
-    "Friday": [
-        ("216호", "토 202465133 피아노 최윤정 14-18"),
-        ("208호", "토 202465133 피아노 최윤정 18-22"),
-        ("216호", "일 202465133 피아노 최윤정 14-18"),
-        ("208호", "일 202465133 피아노 최윤정 18-22"),
-    ],
+    "Friday": [("216호", "토 202465133 피아노 최윤정 14-18"), ("208호", "토 202465133 피아노 최윤정 18-22"),
+               ("216호", "일 202465133 피아노 최윤정 14-18"), ("208호", "일 202465133 피아노 최윤정 18-22")],
     "Saturday": [],
-    "Sunday": [("216", "202465133 피아노 최윤정 16:40-20:40"), ("208", "202465133 피아노 최윤정 20:40-22:40")],
+    "Sunday": [("216호 연습실 예약", "202465133 피아노 최윤정 16:40-20:40"), ("208호 연습실 예약", "202465133 피아노 최윤정 20:40-22:40")],
 }
 
 # ----------------------------
@@ -44,30 +40,26 @@ PLATO_ID = os.getenv("PLATO_ID")
 PLATO_PW = os.getenv("PLATO_PW")
 
 # ----------------------------
-# 오늘 요일 판별 (한국 기준) + 테스트용 강제 설정 가능
+# 오늘 요일 (한국 기준)
 # ----------------------------
 korea_tz = pytz.timezone("Asia/Seoul")
 today_korea = datetime.now(korea_tz).strftime("%A")
-
-# ✅ 테스트 시 강제 요일 지정
-# today_korea = "Friday"
-
 titles_today = title_map.get(today_korea, [])
-
 print(f"📅 오늘 요일 (한국 기준): {today_korea}")
 print(f"✍️ 오늘 올라갈 게시글 수: {len(titles_today)}")
 
-if not titles_today:
-    print("⚠️ 오늘 등록할 게시글이 없습니다.")
-    exit(0)
+# ----------------------------
+# 드라이버 경로를 한 번만 설치
+# ----------------------------
+driver_path = ChromeDriverManager().install()
 
 # ----------------------------
-# 게시글 작성 스레드 함수
+# 병렬 제출 함수
 # ----------------------------
 def prepare_and_post(board_name, title):
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver = webdriver.Chrome(service=Service(driver_path), options=chrome_options)
     try:
-        print(f"\n🌐 로그인 및 준비 시작 - {board_name}")
+        print(f"🌐 로그인 및 준비 시작 - {board_name}")
         driver.get("https://plato.pusan.ac.kr/")
 
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "input-username")))
@@ -78,19 +70,22 @@ def prepare_and_post(board_name, title):
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "page-footer")))
         print(f"✅ 로그인 성공 - {board_name}")
 
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "연습실 예약"))).click()
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, board_name))).click()
+        link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "연습실 예약")))
+        driver.execute_script("arguments[0].scrollIntoView(true);", link)
+        driver.execute_script("arguments[0].click();", link)
+
+        board_link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, board_name)))
+        driver.execute_script("arguments[0].scrollIntoView(true);", board_link)
+        driver.execute_script("arguments[0].click();", board_link)
         print(f"🟢 게시판 진입 성공 - {board_name}")
 
         write_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.btn.btn-primary")))
         driver.execute_script("arguments[0].scrollIntoView(true);", write_btn)
         driver.execute_script("arguments[0].click();", write_btn)
-        print("📝 글쓰기 준비 완료")
 
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "id_subject"))).send_keys(title)
         driver.execute_script("document.getElementById('id_content').value = '.'")
 
-        # 즉시 제출 (테스트용)
         driver.find_element(By.ID, "id_submitbutton").click()
         print(f"✅ 게시 완료: {board_name} / {title}")
 
@@ -103,7 +98,7 @@ def prepare_and_post(board_name, title):
         driver.quit()
 
 # ----------------------------
-# 병렬 실행 (테스트용)
+# 병렬 실행 (동시에 여러 개 제출)
 # ----------------------------
 threads = []
 for board_name, title in titles_today:
