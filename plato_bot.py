@@ -110,30 +110,47 @@ def post_to_plato(forum_id, title):
         time.sleep(2)
 
         # "쓰기" 버튼 클릭
-        WebDriverWait(driver, 10).until(
-    EC.element_to_be_clickable((By.CSS_SELECTOR, "a.btn.btn-primary"))
-).click()
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, "a.btn.btn-primary"))
+            ).click()
+            print("🟢 '쓰기' 버튼 클릭 성공")
+        except Exception as e:
+            print("❌ '쓰기' 버튼 클릭 실패:", e)
+            driver.save_screenshot("write_button_error.png")
+            return
         time.sleep(2)
 
         # 제목 입력
-        driver.find_element(By.ID, "id_subject").send_keys(title)
-
+        try:
+            driver.find_element(By.ID, "id_subject").send_keys(title)
+            print("🟢 제목 입력 성공")
+        except Exception as e:
+            print("❌ 제목 입력 실패:", e)
+            driver.save_screenshot("subject_error.png")
+            return
         # 본문 작성 (간단히 마침표)
-        driver.execute_script("document.getElementById('id_content').value = '.'")
-
+        try:
+            driver.execute_script("document.getElementById('id_content').value = '.'")
+            print("🟢 본문 입력 성공")
+        except Exception as e:
+            print("❌ 본문 입력 실패 (JS):", e)
+            driver.save_screenshot("content_error.png")
+            return
         # 게시 클릭
-        driver.find_element(By.ID, "id_submitbutton").click()
+        try:
+            driver.find_element(By.ID, "id_submitbutton").click()
+            print(f"✅ 게시 완료: {title}")
 
-        print(f"✅ 게시 완료: {title}")
-
-    except Exception as e:
-        print(f"❌ 오류 발생: {e}")
-        if driver:
-            driver.save_screenshot("error.png")
-
-    finally:
-        if driver:
-            driver.quit()
+        except Exception as e:
+            print("❌ 제출 버튼 클릭 실패:", e)
+            driver.save_screenshot("submit_error.png")
+            with open("submit_page_source.html", "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+            return
+        finally:
+            if driver:
+                driver.quit()
 
 # ----------------------------
 # 오늘의 게시글들 반복 업로드
