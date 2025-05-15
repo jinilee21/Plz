@@ -1,6 +1,8 @@
 import os
 import time
 from datetime import datetime
+import pytz
+import threading
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -10,7 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # ----------------------------
-# 요일별 게시판 ID + 제목 리스트
+# 요일별 게시판명 + 제목 리스트 (한국 시간 기준으로 판별)
 # ----------------------------
 title_map = {
     "Monday": [
@@ -30,15 +32,15 @@ title_map = {
         ("208호 연습실 예약", "202465133 피아노 최윤정 16-20"),
     ],
     "Friday": [
-        ("216호 연습실 예약", "토 202465133 피아노 최윤정 14-18"),
-        ("208호 연습실 예약", "토 202465133 피아노 최윤정 18-22"),
-        ("216호 연습실 예약", "일 202465133 피아노 최윤정 14-18"),
-        ("208호 연습실 예약", "일 202465133 피아노 최윤정 18-22"),
+        ("216호", "토 202465133 피아노 최윤정 14-18"),
+        ("208호", "토 202465133 피아노 최윤정 18-22"),
+        ("216호", "일 202465133 피아노 최윤정 14-18"),
+        ("208호", "일 202465133 피아노 최윤정 18-22"),
     ],
     "Saturday": [],
     "Sunday": [
-        ("216호", "202465133 피아노 최윤정 16:40-20:40"),
-        ("208호", "202465133 피아노 최윤정 20:40-22:40"),
+        ("216", "202465133 피아노 최윤정 16:40-20:40"),
+        ("208", "202465133 피아노 최윤정 20:40-22:40"),
     ],
 }
 
@@ -51,7 +53,7 @@ chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 
 # ----------------------------
-# 로그인 정보
+# 환경 변수에서 로그인 정보 가져오기
 # ----------------------------
 PLATO_ID = os.getenv("PLATO_ID")
 PLATO_PW = os.getenv("PLATO_PW")
