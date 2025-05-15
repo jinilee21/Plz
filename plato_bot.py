@@ -51,7 +51,7 @@ chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 
 # ----------------------------
-# 로그인 정보 (GitHub Secrets)
+# 로그인 정보
 # ----------------------------
 PLATO_ID = os.getenv("PLATO_ID")
 PLATO_PW = os.getenv("PLATO_PW")
@@ -64,11 +64,11 @@ weekday = now.strftime("%A")
 titles_today = title_map.get(weekday, [])
 
 # ----------------------------
-# 13시까지 대기
+# 13시까지 대기 (필요시 주석 해제)
 # ----------------------------
-#while datetime.now().hour < 13:
- #   print("🕒 대기 중...", datetime.now().strftime("%H:%M:%S"))
- #   time.sleep(10)
+# while datetime.now().hour < 13:
+#     print("🕒 대기 중...", datetime.now().strftime("%H:%M:%S"))
+#     time.sleep(10)
 
 # ----------------------------
 # 게시글 작성 함수
@@ -79,43 +79,51 @@ def post_to_plato(forum_id, title):
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
         driver.get("https://plato.pusan.ac.kr/")
 
-        # 로그인 입력칸 로딩 대기
+        # 로그인 입력 대기
         WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.ID, "input-username"))
         )
+        driver.find_element(By.ID, "input-username").send_keys(PLATO_ID)
+        driver.find_element(By.ID, "input-password").send_keys(PLATO_PW)
 
-        try:
-            driver.find_element(By.ID, "input-username").send_keys(PLATO_ID)
-            driver.find_element(By.ID, "input-password").send_keys(PLATO_PW)
-            driver.find_element(By.ID, "loginbutton").click()
-        except Exception as e:
-            print("❌ 로그인 입력칸 찾기 실패:", e)
-            driver.save_screenshot("login_error.png")
-            return
+        # 로그인 버튼 클릭 대기 → 클릭
+        WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.NAME, "loginbutton"))
+        ).click()
+
         time.sleep(3)
 
-        forum_url = f"https://plato.pusan.ac.kr/mod/forum/view.php?id={str(forum_id)}"
+        # 게시판 진입
+        forum_url = f"https://plato.pusan.ac.kr/mod/forum/view.php?id={forum_id}"
         driver.get(forum_url)
         time.sleep(2)
 
+        # "쓰기" 버튼 클릭
         driver.find_element(By.LINK_TEXT, "쓰기").click()
         time.sleep(2)
 
+        # 제목 입력
         driver.find_element(By.ID, "id_subject").send_keys(title)
+
+        # 본문 작성 (간단히 마침표)
         driver.execute_script("document.getElementById('id_content').value = '.'")
+
+        # 게시 클릭
         driver.find_element(By.ID, "id_submitbutton").click()
 
         print(f"✅ 게시 완료: {title}")
 
     except Exception as e:
         print(f"❌ 오류 발생: {e}")
+        if driver:
+            driver.save_screenshot("error.png")
 
     finally:
         if driver:
             driver.quit()
 
 # ----------------------------
-# 오늘의 게시글들 업로드
+# 오늘의 게시글들 반복 업로드
 # ----------------------------
 for forum_id, title in titles_today:
     post_to_plato(forum_id, title)
