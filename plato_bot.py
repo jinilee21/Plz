@@ -74,13 +74,13 @@ def prepare_and_post(board_name, title):
         driver.execute_script("arguments[0].scrollIntoView(true);", link)
         driver.execute_script("arguments[0].click();", link)
 
-        # 게시판 span 찾기 (정확히 일치)
-        board_xpath = f"//span[@class='instancename' and starts-with(normalize-space(text()[1]), '{board_name}')]"
+        # 게시판 전체 텍스트가 "208호 게시판" 또는 "208호 연습실 예약 게시판"인 경우 정확하게 찾기
+        board_xpath = f"//span[@class='instancename' and normalize-space(.)='{board_name} 게시판']"
         board_elem = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, board_xpath))
         )
 
-        # span 태그의 상위 a 태그 클릭
+       # 상위 a 태그 클릭
         a_tag = board_elem.find_element(By.XPATH, "./ancestor::a")
         driver.execute_script("arguments[0].scrollIntoView(true);", a_tag)
         driver.execute_script("arguments[0].click();", a_tag)
