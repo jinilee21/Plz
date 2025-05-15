@@ -18,11 +18,18 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: 📥 패키지 설치
+      - name: 📥 패키지 및 Chrome 설치
         run: |
-          pip install -r requirements.txt
           sudo apt-get update
-          sudo apt-get install -y chromium-chromedriver
+          sudo apt-get install -y chromium-browser chromium-chromedriver
+          pip install -r requirements.txt
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: 🔧 크롬 드라이버 환경변수 설정
+        run: |
+          echo "CHROME_BIN=$(which chromium-browser)" >> $GITHUB_ENV
+          echo "PATH=$PATH:$(dirname $(which chromium-chromedriver))" >> $GITHUB_ENV
 
       - name: 🤖 봇 실행
         env:
