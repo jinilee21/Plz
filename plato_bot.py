@@ -14,31 +14,31 @@ from webdriver_manager.chrome import ChromeDriverManager
 # ----------------------------
 title_map = {
     "Monday": [
-        (553004, "202465133 피아노 최윤정 16-20"),
-        (552991, "202465133 피아노 최윤정 12-15"),
+        ("216", "202465133 피아노 최윤정 16-20"),
+        ("208", "202465133 피아노 최윤정 12-15"),
     ],
     "Tuesday": [
-        (553004, "202465133 피아노 최윤정 15-19"),
-        (552991, "202465133 피아노 최윤정 19-22"),
+        ("216", "202465133 피아노 최윤정 15-19"),
+        ("208", "202465133 피아노 최윤정 19-22"),
     ],
     "Wednesday": [
-        (553004, "202465133 피아노 최윤정 11:20-15"),
-        (552991, "202465133 피아노 최윤정 16-20"),
+        ("216", "202465133 피아노 최윤정 11:20-15"),
+        ("208", "202465133 피아노 최윤정 16-20"),
     ],
     "Thursday": [
-        (553004, "202465133 피아노 최윤정 12-16"),
-        (552991, "202465133 피아노 최윤정 16-20"),
+        ("216", "202465133 피아노 최윤정 12-16"),
+        ("208", "202465133 피아노 최윤정 16-20"),
     ],
     "Friday": [
-        (1306558, "토 202465133 피아노 최윤정 14-18"),
-        (1642697, "토 202465133 피아노 최윤정 18-22"),
-        (1306558, "일 202465133 피아노 최윤정 14-18"),
-        (1642697, "일 202465133 피아노 최윤정 18-22"),
+        ("2층 주말 및 공휴일 연습실 예약 216", "토 202465133 피아노 최윤정 14-18"),
+        ("2층 주말 및 공휴일 연습실 예약 208", "토 202465133 피아노 최윤정 18-22"),
+        ("2층 주말 및 공휴일 연습실 예약 216", "일 202465133 피아노 최윤정 14-18"),
+        ("2층 주말 및 공휴일 연습실 예약 208", "일 202465133 피아노 최윤정 18-22"),
     ],
     "Saturday": [],
     "Sunday": [
-        (553004, "202465133 피아노 최윤정 16:40-20:40"),
-        (552991, "202465133 피아노 최윤정 20:40-22:40"),
+        ("216", "202465133 피아노 최윤정 16:40-20:40"),
+        ("208", "202465133 피아노 최윤정 20:40-22:40"),
     ],
 }
 
@@ -73,95 +73,61 @@ titles_today = title_map.get(weekday, [])
 # ----------------------------
 # 게시글 작성 함수
 # ----------------------------
-def post_to_plato(forum_id, title):
+def post_to_plato(board_name, title):
     driver = None
     try:
+        print("🌐 로그인 시도 중...")
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
         driver.get("https://plato.pusan.ac.kr/")
 
-        # 로그인 입력 대기
-        WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.ID, "input-username"))
-        )
+        # 로그인 입력 대기 및 입력
+        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "input-username")))
         driver.find_element(By.ID, "input-username").send_keys(PLATO_ID)
         driver.find_element(By.ID, "input-password").send_keys(PLATO_PW)
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.NAME, "loginbutton"))).click()
 
-        # 로그인 버튼 클릭 대기 → 클릭
-        WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.NAME, "loginbutton"))
-        ).click()
+        # 로그인 성공 여부 확인
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "page-footer")))
+        print("✅ 로그인 성공")
 
-        time.sleep(3)
+        # 메인 페이지에서 게시판 이동
+        print("🎯 '음악학과 연습실예약' 클릭 시도 중...")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "음악학과 연습실예약"))).click()
+        print("🟢 '음악학과 연습실예약' 클릭 성공")
 
-        # ✅ 로그인 성공 확인
-        try:
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "page-footer"))  # 또는 사용자 메뉴의 ID
-            )
-            print("✅ 로그인 성공")
-        except:
-            print("❌ 로그인 실패: 아이디 또는 비밀번호가 잘못됐거나, 페이지 로딩 실패")
-            driver.save_screenshot("login_failed.png")
-            return
+        print(f"🎯 게시판 '{board_name}' 클릭 시도 중...")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, board_name))).click()
+        print(f"🟢 게시판 '{board_name}' 클릭 성공")
 
-        # 게시판 진입
-        forum_url = f"https://plato.pusan.ac.kr/mod/forum/view.php?id={forum_id}"
-        driver.get(forum_url)
-        time.sleep(2)
+        print("📝 '쓰기' 버튼 클릭 시도 중...")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.btn.btn-primary"))).click()
+        print("🟢 '쓰기' 버튼 클릭 성공")
 
-        # "쓰기" 버튼 클릭
-        try:
-            WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "a.btn.btn-primary"))
-            ).click()
-            print("🟢 '쓰기' 버튼 클릭 성공")
-        except Exception as e:
-            print("❌ '쓰기' 버튼 클릭 실패:", e)
-            driver.save_screenshot("write_button_error.png")
-            return
-        time.sleep(2)
+        print("📝 제목 입력 중...")
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "id_subject"))).send_keys(title)
+        print("🟢 제목 입력 성공")
 
-        # 제목 입력
-        try:
-            driver.find_element(By.ID, "id_subject").send_keys(title)
-            print("🟢 제목 입력 성공")
-        except Exception as e:
-            print("❌ 제목 입력 실패:", e)
-            driver.save_screenshot("subject_error.png")
-            return
+        print("📝 본문 입력 중...")
+        driver.execute_script("document.getElementById('id_content').value = '.'")
+        print("🟢 본문 입력 성공")
 
-        # 본문 작성 (간단히 마침표)
-        try:
-            driver.execute_script("document.getElementById('id_content').value = '.'")
-            print("🟢 본문 입력 성공")
-        except Exception as e:
-            print("❌ 본문 입력 실패 (JS):", e)
-            driver.save_screenshot("content_error.png")
-            return
-
-        # 게시 클릭
-        try:
-            driver.find_element(By.ID, "id_submitbutton").click()
-            print(f"✅ 게시 완료: {title}")
-        except Exception as e:
-            print("❌ 제출 버튼 클릭 실패:", e)
-            driver.save_screenshot("submit_error.png")
-            with open("submit_page_source.html", "w", encoding="utf-8") as f:
-                f.write(driver.page_source)
-            return
+        print("📤 제출 클릭 중...")
+        driver.find_element(By.ID, "id_submitbutton").click()
+        print(f"✅ 게시 완료: {board_name} / {title}")
 
     except Exception as e:
-        print("❌ 전체 try 블록 오류:", e)
+        print(f"❌ 오류 발생: {e}")
         if driver:
-            driver.save_screenshot("fatal_error.png")
+            driver.save_screenshot("error.png")
+            with open("page_source.html", "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
 
     finally:
         if driver:
             driver.quit()
 
-
 # ----------------------------
-# 오늘의 게시글들 반복 업로드
+# 오늘 게시글 반복 업로드
 # ----------------------------
-for forum_id, title in titles_today:
-    post_to_plato(forum_id, title)
+for board_name, title in titles_today:
+    post_to_plato(board_name, title)
