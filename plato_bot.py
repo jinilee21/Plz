@@ -74,9 +74,16 @@ def prepare_and_post(board_name, title):
         driver.execute_script("arguments[0].scrollIntoView(true);", link)
         driver.execute_script("arguments[0].click();", link)
 
-        board_link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, board_name)))
-        driver.execute_script("arguments[0].scrollIntoView(true);", board_link)
-        driver.execute_script("arguments[0].click();", board_link)
+        # 게시판 이름이 들어간 span 태그 찾기
+        board_xpath = f"//span[@class='instancename' and contains(text(), '{board_name}')]"
+        board_elem = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.XPATH, board_xpath))
+        )
+
+        # span 태그의 상위 a 태그 클릭
+        a_tag = board_elem.find_element(By.XPATH, "./ancestor::a")
+        driver.execute_script("arguments[0].scrollIntoView(true);", a_tag)
+        driver.execute_script("arguments[0].click();", a_tag)
         print(f"🟢 게시판 진입 성공 - {board_name}")
 
         write_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.btn.btn-primary")))
