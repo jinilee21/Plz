@@ -1,0 +1,33 @@
+name: Plato Auto Poster
+
+on:
+  schedule:
+    - cron: '55 3 * * 0-5'  # 매일 KST 12:55 실행 (UTC 기준)
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install selenium
+          sudo apt-get update
+          sudo apt-get install -y chromium-chromedriver
+          sudo ln -s /usr/lib/chromium-browser/chromedriver /usr/bin/chromedriver
+
+      - name: Run Plato Bot
+        env:
+          PLATO_ID: ${{ secrets.PLATO_ID }}
+          PLATO_PW: ${{ secrets.PLATO_PW }}
+        run: |
+          python plato_bot.py
