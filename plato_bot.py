@@ -104,11 +104,19 @@ def post_to_plato(board_name, title):
         print("🟢 '음악학과 연습실 예약' 클릭 성공")
 
         print(f"🎯 게시판 '{board_name}' 클릭 시도 중...")
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, board_name))).click()
+        board_link = WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, board_name))
+        )
+        board_link.click()
+
         print(f"🟢 게시판 '{board_name}' 클릭 성공")
 
         print("📝 '쓰기' 버튼 클릭 시도 중...")
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.btn.btn-primary"))).click()
+        write_button = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "a.btn.btn-primary"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", write_button)
+        driver.execute_script("arguments[0].click();", write_button)
         print("🟢 '쓰기' 버튼 클릭 성공")
 
         print("📝 제목 입력 중...")
