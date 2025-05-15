@@ -5,6 +5,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # ----------------------------
@@ -79,7 +81,7 @@ def post_to_plato(forum_id, title):
 
         # 로그인 입력칸 로딩 대기
         WebDriverWait(driver, 15).until(
-            EC.presence_of_element_located((By.ID, "userid"))
+            EC.presence_of_element_located((By.ID, "input-username"))
         )
 
         try:
@@ -96,11 +98,11 @@ def post_to_plato(forum_id, title):
         driver.get(forum_url)
         time.sleep(2)
 
-        driver.find_element(By.LINK_TEXT, "새 토론 주제 추가").click()
+        driver.find_element(By.LINK_TEXT, "쓰기").click()
         time.sleep(2)
 
         driver.find_element(By.ID, "id_subject").send_keys(title)
-        driver.find_element(By.ID, "id_messageeditable").send_keys(".")
+        driver.execute_script("document.getElementById('id_content').value = '.'")
         driver.find_element(By.ID, "id_submitbutton").click()
 
         print(f"✅ 게시 완료: {title}")
