@@ -57,93 +57,73 @@ PLATO_ID = os.getenv("PLATO_ID")
 PLATO_PW = os.getenv("PLATO_PW")
 
 # ----------------------------
-# 오늘의 요일에 해당하는 제목 리스트
+# 한국 시간으로 오늘 요일 확인
 # ----------------------------
-now = datetime.now()
-weekday = now.strftime("%A")
-titles_today = title_map.get(weekday, [])
+korea_tz = pytz.timezone("Asia/Seoul")
+today_korea = datetime.now(korea_tz).strftime("%A")
+titles_today = title_map.get(today_korea, [])
 
 # ----------------------------
-# 13시까지 대기 (필요시 주석 해제)
+# 병렬 제출용 스레드 함수
 # ----------------------------
-# while datetime.now().hour < 13:
-#     print("🕒 대기 중...", datetime.now().strftime("%H:%M:%S"))
-#     time.sleep(10)
-
-# ----------------------------
-# 게시글 작성 함수
-# ----------------------------
-def post_to_plato(board_name, title):
-    driver = None
+def prepare_and_wait_post(board_name, title):
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     try:
-        print("🌐 로그인 시도 중...")
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        print(f"\n🌐 로그인 및 준비 시작 - {board_name}")
         driver.get("https://plato.pusan.ac.kr/")
 
-        # 로그인 입력 대기 및 입력
+        # 로그인
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "input-username")))
         driver.find_element(By.ID, "input-username").send_keys(PLATO_ID)
         driver.find_element(By.ID, "input-password").send_keys(PLATO_PW)
         WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.NAME, "loginbutton"))).click()
 
-        # 로그인 성공 여부 확인
+        # 로그인 확인
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "page-footer")))
-        print("✅ 로그인 성공")
-        # 로그인 이후, 클릭 전 화면 저장
-        driver.save_screenshot("after_login.png")
-        with open("after_login.html", "w", encoding="utf-8") as f:
-            f.write(driver.page_source)
+        print(f"✅ 로그인 성공 - {board_name}")
 
-        # 메인 페이지에서 게시판 이동
-        print("🎯 '음악학과 연습실 예약' 클릭 시도 중...")
-        link = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "음악학과 연습실 예약"))
-        )
-        driver.execute_script("arguments[0].scrollIntoView(true);", link)
-        driver.execute_script("arguments[0].click();", link)
-        print("🟢 '음악학과 연습실 예약' 클릭 성공")
+        # 게시판 접근
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "연습실 예약"))).click()
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, board_name))).click()
+        print(f"🟢 게시판 진입 성공 - {board_name}")
 
-        print(f"🎯 게시판 '{board_name}' 클릭 시도 중...")
-        board_link = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, board_name))
-        )
-        board_link.click()
+        # 글쓰기 버튼 클릭
+        write_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.btn.btn-primary")))
+        driver.execute_script("arguments[0].scrollIntoView(true);", write_btn)
+        driver.execute_script("arguments[0].click();", write_btn)
+        print("📝 글쓰기 준비 완료")
 
-        print(f"🟢 게시판 '{board_name}' 클릭 성공")
-
-        print("📝 '쓰기' 버튼 클릭 시도 중...")
-        write_button = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "a.btn.btn-primary"))
-        )
-        driver.execute_script("arguments[0].scrollIntoView(true);", write_button)
-        driver.execute_script("arguments[0].click();", write_button)
-        print("🟢 '쓰기' 버튼 클릭 성공")
-
-        print("📝 제목 입력 중...")
+        # 제목/내용 작성 (제출은 나중에)
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "id_subject"))).send_keys(title)
-        print("🟢 제목 입력 성공")
-
-        print("📝 본문 입력 중...")
         driver.execute_script("document.getElementById('id_content').value = '.'")
-        print("🟢 본문 입력 성공")
 
-        print("📤 제출 클릭 중...")
+        # 🕒 서버 시간 13시까지 대기 (UTC 기준)
+        print("⏳ 제출 대기 중 (서버 시간 기준 13시)...")
+        while datetime.utcnow().hour != 13:
+            time.sleep(0.5)
+
+        # 제출
         driver.find_element(By.ID, "id_submitbutton").click()
         print(f"✅ 게시 완료: {board_name} / {title}")
 
     except Exception as e:
-        print(f"❌ 오류 발생: {e}")
-        if driver:
-            driver.save_screenshot("error.png")
-            with open("page_source.html", "w", encoding="utf-8") as f:
-                f.write(driver.page_source)
+        print(f"❌ 오류 발생 - {board_name}: {e}")
+        driver.save_screenshot(f"error_{board_name}.png")
+        with open(f"page_source_{board_name}.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
 
     finally:
-        if driver:
-            driver.quit()
+        driver.quit()
 
 # ----------------------------
-# 오늘 게시글 반복 업로드
+# 게시글 병렬 준비 + 동시 제출
 # ----------------------------
+threads = []
 for board_name, title in titles_today:
-    post_to_plato(board_name, title)
+    t = threading.Thread(target=prepare_and_wait_post, args=(board_name, title))
+    t.start()
+    threads.append(t)
+
+# 모든 스레드 종료까지 대기
+for t in threads:
+    t.join()
