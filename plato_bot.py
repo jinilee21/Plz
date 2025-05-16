@@ -177,15 +177,19 @@ def prepare_and_post(board_name, title):
                     if (typeof(tinymce) !== 'undefined') {
                         tinymce.activeEditor.setContent('자동화 테스트 게시글입니다.');
                         tinymce.activeEditor.save();  // 🔑 textarea에 반영
-                    } else {
-                        document.getElementById('id_content').value = '자동화 테스트 게시글입니다.';
                     }
                 """)
-            except Exception as js_e:
-                print(f"⚠️ JS로도 본문 설정 실패: {js_e}")
-                # 실제 값 확인 (선택적 로그)
+                time.sleep(1)  # 🔁 비동기 저장 대기
+                # 최종 확인 및 강제 삽입
                 content_value = driver.execute_script("return document.getElementById('id_content').value;")
                 print(f"📋 본문 최종 내용 (textarea): {content_value}")
+                if not content_value.strip():
+                    driver.execute_script("document.getElementById('id_content').value = '자동화 테스트 게시글입니다.';")
+                    driver.execute_script("document.getElementById('id_content').dispatchEvent(new Event('change'));")
+                    print("⚠️ 강제로 textarea에 값 삽입 완료")
+            except Exception as js_e:
+                print(f"⚠️ JS로도 본문 설정 실패: {js_e}")
+
 
         # 서버 기준 목표 제출 시간 (예: 한국 시간 13:00 == UTC 04:00)
         #target_utc_time = datetime.combine(
