@@ -11,6 +11,8 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.alert import Alert
+from selenium.common.exceptions import UnexpectedAlertPresentException
 from webdriver_manager.chrome import ChromeDriverManager
 
 # ----------------------------
@@ -127,6 +129,7 @@ def prepare_and_post(board_name, title):
         driver.execute_script("arguments[0].scrollIntoView(true);", link)
         driver.execute_script("arguments[0].click();", link)
 
+        #게시판 클릭
         board_xpath = f"//span[@class='instancename' and normalize-space(.)='{board_name} 게시판']"
         board_elem = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, board_xpath)))
 
@@ -140,7 +143,8 @@ def prepare_and_post(board_name, title):
         driver.execute_script("arguments[0].scrollIntoView(true);", write_btn)
         driver.execute_script("arguments[0].click();", write_btn)
 
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "id_subject"))).send_keys(title)
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "id_subject"))).send_keys(title)
         # 본문 유효 입력 (중요!)
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "id_content"))
@@ -158,9 +162,16 @@ def prepare_and_post(board_name, title):
 
         # 서버 시간 기준 목표 시각까지 보정 대기
         wait_until_server_target_time(target_utc_time)
-        # 제출 버튼 클릭 (JavaScript로 강제 클릭)
-        submit_btn = driver.find_element(By.ID, "id_submitbutton")
-        driver.execute_script("arguments[0].click();", submit_btn)
+        
+        # 제출 (클릭 가능할 때까지 기다림)
+        try:
+            submit_btn = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "id_submitbutton")))
+            driver.execute_script("arguments[0].click();", submit_btn)
+        except UnexpectedAlertPresentException:
+            alert = Alert(driver)
+            print(f"⚠️ 경고창 감지됨: {alert.text}")
+            alert.accept()
+
         print(f"✅ 게시 완료: {board_name} / {title}")
         
         # 제출 후 URL 및 결과 페이지 저장
