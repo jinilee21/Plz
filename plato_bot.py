@@ -74,8 +74,8 @@ print(f"✍️ 오늘 올라갈 게시글 수: {len(titles_today)}")
 # ----------------------------
 def get_plato_server_time():
     response = requests.get("https://plato.pusan.ac.kr", timeout=5)
-    server_date = response.headers['Date']  # 'Fri, 17 May 2025 04:00:00 GMT'
-    server_time = email.utils.parsedate_to_datetime(server_date)  # datetime 객체 (UTC)
+    server_date = response.headers['Date']
+    server_time = email.utils.parsedate_to_datetime(server_date)
     return server_time
 
 # ----------------------------
@@ -113,6 +113,7 @@ def prepare_and_post(board_name, title):
         print(f"🌐 로그인 및 준비 시작 - {board_name}")
         driver.get("https://plato.pusan.ac.kr/")
 
+        # 로그인 단계
         WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.ID, "input-username")))
         driver.find_element(By.ID, "input-username").send_keys(PLATO_ID)
         driver.find_element(By.ID, "input-password").send_keys(PLATO_PW)
@@ -121,6 +122,7 @@ def prepare_and_post(board_name, title):
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "page-footer")))
         print(f"✅ 로그인 성공 - {board_name}")
 
+        # 게시판으로 이동
         link = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.PARTIAL_LINK_TEXT, "연습실 예약")))
         driver.execute_script("arguments[0].scrollIntoView(true);", link)
         driver.execute_script("arguments[0].click();", link)
@@ -133,6 +135,7 @@ def prepare_and_post(board_name, title):
         driver.execute_script("arguments[0].click();", a_tag)
         print(f"🟢 게시판 진입 성공 - {board_name}")
 
+        # 글쓰기 화면으로 이동
         write_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a.btn.btn-primary")))
         driver.execute_script("arguments[0].scrollIntoView(true);", write_btn)
         driver.execute_script("arguments[0].click();", write_btn)
@@ -146,12 +149,15 @@ def prepare_and_post(board_name, title):
             #dtime(4, 0, 0),  # 13시 KST = 04시 UTC
             #tzinfo=timezone.utc
         #)
+        # 서버 시간 기준 1분 뒤로 목표 시간 설정 (테스트용)
         server_now = get_plato_server_time()
         target_utc_time = server_now + timedelta(minutes=1)
 
+        # 서버 시간 기준 목표 시각까지 보정 대기
         wait_until_server_target_time(target_utc_time)
-
-        driver.find_element(By.ID, "id_submitbutton").click()
+        # 제출 버튼 클릭 (JavaScript로 강제 클릭)
+        submit_btn = driver.find_element(By.ID, "id_submitbutton")
+        driver.execute_script("arguments[0].click();", submit_btn)
         print(f"✅ 게시 완료: {board_name} / {title}")
 
     except Exception as e:
