@@ -167,14 +167,22 @@ def prepare_and_post(board_name, title):
         # 서버 시간 기준 목표 시각까지 보정 대기
         wait_until_server_target_time(target_utc_time)
         
-        # 제출 (클릭 가능할 때까지 기다림)
+        # 제출 버튼 클릭
         try:
             submit_btn = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "id_submitbutton")))
             driver.execute_script("arguments[0].click();", submit_btn)
         except UnexpectedAlertPresentException:
             alert = Alert(driver)
-            print(f"⚠️ 경고창 감지됨: {alert.text}")
+            print(f"⚠️ 제출 중 경고창 발생: {alert.text}")
             alert.accept()
+        except Exception as e:
+            print(f"⚠️ 제출 버튼 예외: {e}")
+            # 혹시 모를 열린 alert 닫기
+            try:
+                alert = Alert(driver)
+                alert.accept()
+            except:
+                pass
 
         print(f"✅ 게시 완료: {board_name} / {title}")
         
