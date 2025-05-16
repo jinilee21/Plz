@@ -186,14 +186,11 @@ def prepare_and_post(board_name, title):
 
         
         # 서버 기준 목표 제출 시간 (예: 한국 시간 13:00 == UTC 04:00)
-        #target_utc_time = datetime.combine(
-            #datetime.utcnow().date(),
-            #dtime(4, 0, 0),  # 13시 KST = 04시 UTC
-            #tzinfo=timezone.utc
-        #)
-        # 서버 시간 기준 1분 뒤로 목표 시간 설정 (테스트용)
-        server_now = get_plato_server_time()
-        target_utc_time = server_now + timedelta(minutes=1)
+        target_utc_time = datetime.combine(
+            datetime.utcnow().date(),
+            dtime(4, 0, 0),  # 13시 KST = 04시 UTC
+            tzinfo=timezone.utc
+        )
 
         # 서버 시간 기준 목표 시각까지 보정 대기
         wait_until_server_target_time(target_utc_time)
