@@ -155,59 +155,33 @@ def prepare_and_post(board_name, title):
         print(f"📝 제목 확인: {subject_value}")
 
 
-      # 본문 입력 처리 강화
-        iframe_success = False
-        for _ in range(3):
-            try:
-                iframe = WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[id^='id_content_ifr']"))
-                )
-                driver.switch_to.frame(iframe)
-                body = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, "tinymce")))
-                body.clear()
-                body.send_keys("자동화 테스트 게시글입니다.")
-                iframe_success = True
-                print("📝 본문 입력 성공 (iframe 경로)")
-                break
-            except Exception as e:
-                print(f"⚠️ iframe 시도 실패, 재시도 중...: {e}")
-                time.sleep(2)
-        driver.switch_to.default_content()
-        time.sleep(2)  # TinyMCE 로딩 대기
-
-
-        # iframe 실패 시에만 JS로 TinyMCE fallback 시도
-        if not iframe_success:
-            try:
-                print("🔁 JS 기반 TinyMCE 설정 시도 (fallback)")
-                driver.execute_script("""
-                    const content = '자동화 테스트 게시글입니다.';
-                    if (typeof(tinymce) !== 'undefined' && tinymce.activeEditor) {
-                        tinymce.activeEditor.setContent(content);
-                        tinymce.activeEditor.focus();
-                        tinymce.activeEditor.selection.select(tinymce.activeEditor.getBody(), true);
-                        tinymce.activeEditor.selection.collapse(false);
-                        tinymce.activeEditor.getDoc().dispatchEvent(new Event('input', { bubbles: true }));
-                        tinymce.activeEditor.getBody().dispatchEvent(new Event('input', { bubbles: true }));
-                        tinymce.activeEditor.save();
-                        document.getElementById('id_content').dispatchEvent(new Event('input', { bubbles: true }));
-                        document.getElementById('id_content').dispatchEvent(new Event('change', { bubbles: true }));
-                    } else {
-                        const textarea = document.getElementById('id_content');
-                        textarea.value = content;
-                        textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                        textarea.dispatchEvent(new Event('change', { bubbles: true }));
+        # 본문 입력 처리 - Atto 에디터용
+        try:
+            print("📝 Atto 에디터에 본문 입력 시도 중...")
+            driver.execute_script("""
+                const attoDiv = document.querySelector('div.editor_atto_content[contenteditable="true"]');
+                if (attoDiv) {
+                    attoDiv.focus();
+                    attoDiv.innerHTML = '<p>자동화 테스트 게시글입니다.</p>';
+                    attoDiv.dispatchEvent(new Event('input', { bubbles: true }));
+                    attoDiv.dispatchEvent(new Event('change', { bubbles: true }));
+        
+                    const hiddenTextarea = document.getElementById('id_content');
+                    if (hiddenTextarea) {
+                        hiddenTextarea.value = '자동화 테스트 게시글입니다.';
+                        hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                        hiddenTextarea.dispatchEvent(new Event('change', { bubbles: true }));
                     }
-                """)
-                time.sleep(1)
-            except Exception as js_e:
-                print(f"⚠️ JS fallback 실패: {js_e}")
-                content_value_check = driver.execute_script("return document.getElementById('id_content').value;")
-                print(f"🧾 fallback 이후 textarea 값 확인: {content_value_check}")
+                } else {
+                    throw new Error('Atto 에디터 div를 찾지 못했습니다.');
+                }
+            """)
+            time.sleep(1)
+            print("✅ Atto 에디터 본문 입력 성공")
+        except Exception as e:
+            print(f"❌ Atto 에디터 본문 입력 실패: {e}")
 
-
-
-
+        
         # 서버 기준 목표 제출 시간 (예: 한국 시간 13:00 == UTC 04:00)
         #target_utc_time = datetime.combine(
             #datetime.utcnow().date(),
