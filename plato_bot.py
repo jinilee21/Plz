@@ -252,14 +252,50 @@ for board_name, title in titles_today:
     if key not in seen:
         seen.add(key)
         unique_titles_today.append((board_name, title))
-# ----------------------------
-# 병렬 실행 (여러 게시글 동시 처리)
-# ----------------------------
-threads = []
-for board_name, title in unique_titles_today:
-    t = threading.Thread(target=prepare_and_post, args=(board_name, title))
-    t.start()
-    threads.append(t)
 
-for t in threads:
-    t.join()
+
+# ----------------------------
+# 매일 13시 KST 자동 실행 루프
+# ----------------------------
+def daily_scheduler():
+    while True:
+        try:
+            korea_time = datetime.now(pytz.timezone("Asia/Seoul"))
+            today_13_kst = korea_time.replace(hour=13, minute=0, second=0, microsecond=0)
+            if korea_time >= today_13_kst:
+                today_13_kst += timedelta(days=1)
+
+            target_utc_time = today_13_kst.astimezone(pytz.utc)
+            print(f"\n🕒 오늘 {today_13_kst.strftime('%Y-%m-%d %H:%M:%S')} KST 예약 시작 대기 중...")
+            wait_until_server_target_time(target_utc_time)
+
+            weekday = today_13_kst.strftime("%A")
+            day_titles = title_map.get(weekday, [])
+            seen = set()
+            unique_titles = []
+            for b, t in day_titles:
+                if (b, t) not in seen:
+                    seen.add((b, t))
+                    unique_titles.append((b, t))
+
+            threads = []
+            for board_name, title in unique_titles:
+                t = threading.Thread(target=prepare_and_post, args=(board_name, title))
+                t.start()
+                threads.append(t)
+            for t in threads:
+                t.join()
+
+            print("😴 오늘 작업 완료. 다음 예약 시간까지 대기...")
+            time.sleep(60 * 60 * 12)
+
+        except Exception as e:
+            print(f"❌ 스케줄러 오류: {e}")
+            time.sleep(60)
+
+# ----------------------------
+# 엔트리포인트
+# ----------------------------
+if __name__ == "__main__":
+    daily_scheduler()
+
