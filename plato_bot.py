@@ -146,13 +146,20 @@ def prepare_and_post(board_name, title):
         # 제목도 JS로 직접 설정 (선택 사항)
         driver.execute_script(f"document.getElementById('id_subject').value = '{title}'")
 
-       # 본문 입력은 JS 대신 직접 send_keys()로 처리
-        iframe = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[id^='id_content_ifr']")))
-        driver.switch_to.frame(iframe)
-        body = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "tinymce")))
-        body.clear()
-        body.send_keys("자동화 테스트 게시글입니다.")
-        driver.switch_to.default_content()
+       ## 본문 입력 처리 부분
+        try:
+            iframe = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[id^='id_content_ifr']")))
+            driver.switch_to.frame(iframe)
+            body = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "tinymce")))
+            body.clear()
+            body.send_keys("자동화 테스트 게시글입니다.")
+            time.sleep(1)
+            driver.switch_to.default_content()
+        except Exception as e:
+            print(f"❌ 본문 입력 오류 - {board_name}: {e}")
+            raise
+
+        
 
         # 서버 기준 목표 제출 시간 (예: 한국 시간 13:00 == UTC 04:00)
         #target_utc_time = datetime.combine(
@@ -199,12 +206,21 @@ def prepare_and_post(board_name, title):
             f.write(driver.page_source)
     finally:
         driver.quit()
-
+# ----------------------------
+# 중복 제거된 제목 리스트 만들기
+# ----------------------------
+seen = set()
+unique_titles_today = []
+for board_name, title in titles_today:
+    key = (board_name, title)
+    if key not in seen:
+        seen.add(key)
+        unique_titles_today.append((board_name, title))
 # ----------------------------
 # 병렬 실행 (여러 게시글 동시 처리)
 # ----------------------------
 threads = []
-for board_name, title in titles_today:
+for board_name, title in unique_titles_today:
     t = threading.Thread(target=prepare_and_post, args=(board_name, title))
     t.start()
     threads.append(t)
