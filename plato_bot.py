@@ -141,7 +141,10 @@ def prepare_and_post(board_name, title):
         driver.execute_script("arguments[0].click();", write_btn)
 
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "id_subject"))).send_keys(title)
-        driver.execute_script("document.getElementById('id_content').value = '.'")
+        # 본문 유효 입력 (중요!)
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "id_content"))
+        ).send_keys("자동화 테스트 게시글입니다.")
 
         # 서버 기준 목표 제출 시간 (예: 한국 시간 13:00 == UTC 04:00)
         #target_utc_time = datetime.combine(
