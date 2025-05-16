@@ -4,6 +4,7 @@ import requests
 import email.utils
 from datetime import datetime, time as dtime, timedelta, timezone
 import pytz
+import json
 import threading
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -144,12 +145,14 @@ def prepare_and_post(board_name, title):
         driver.execute_script("arguments[0].click();", write_btn)
 
         # 제목 입력
+        safe_title = json.dumps(title)
         driver.execute_script(f"""
             const subjectInput = document.getElementById('id_subject');
-            subjectInput.value = {title};
+            subjectInput.value = {safe_title};
             subjectInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
             subjectInput.dispatchEvent(new Event('change', {{ bubbles: true }}));
         """)
+
         # 디버깅용 확인
         subject_value = driver.execute_script("return document.getElementById('id_subject').value;")
         print(f"📝 제목 확인: {subject_value}")
