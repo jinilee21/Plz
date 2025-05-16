@@ -165,13 +165,13 @@ def prepare_and_post(board_name, title):
                 const attoDiv = document.querySelector('div.editor_atto_content[contenteditable="true"]');
                 if (attoDiv) {
                     attoDiv.focus();
-                    attoDiv.innerHTML = '<p>자동화 테스트 게시글입니다.</p>';
+                    attoDiv.innerHTML = '<p>.</p>';
                     attoDiv.dispatchEvent(new Event('input', { bubbles: true }));
                     attoDiv.dispatchEvent(new Event('change', { bubbles: true }));
         
                     const hiddenTextarea = document.getElementById('id_content');
                     if (hiddenTextarea) {
-                        hiddenTextarea.value = '자동화 테스트 게시글입니다.';
+                        hiddenTextarea.value = '.';
                         hiddenTextarea.dispatchEvent(new Event('input', { bubbles: true }));
                         hiddenTextarea.dispatchEvent(new Event('change', { bubbles: true }));
                     }
