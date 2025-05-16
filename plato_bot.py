@@ -34,9 +34,9 @@ title_map = {
         ("208호 연습실 예약", "202465133 피아노 최윤정 16-20")
     ],
     "Friday": [
-        ("216호", "토 202465133 피아노 최윤정 14-18"),
+        ("216호", "202465133 피아노 최윤정 토 14-18"),
         ("208호", "토 202465133 피아노 최윤정 18-22"),
-        ("216호", "일 202465133 피아노 최윤정 14-18"),
+        ("216호", "202465133 피아노 최윤정 일 14-18"),
         ("208호", "일 202465133 피아노 최윤정 18-22")
     ],
     "Saturday": [],
@@ -159,7 +159,13 @@ def prepare_and_post(board_name, title):
         submit_btn = driver.find_element(By.ID, "id_submitbutton")
         driver.execute_script("arguments[0].click();", submit_btn)
         print(f"✅ 게시 완료: {board_name} / {title}")
-
+        
+        # 제출 후 URL 및 결과 페이지 저장
+        time.sleep(2)
+        print("📄 현재 URL:", driver.current_url)
+        with open(f"post_result_{board_name}.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+            
     except Exception as e:
         print(f"❌ 오류 발생 - {board_name}: {e}")
         driver.save_screenshot(f"error_{board_name}.png")
