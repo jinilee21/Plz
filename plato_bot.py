@@ -168,21 +168,38 @@ def prepare_and_post(board_name, title):
             print(f"❌ 본문 iframe 입력 실패 - {board_name}: {e}")
         finally:
             driver.switch_to.default_content()
+        # TinyMCE 에디터 로딩 대기 (fallback 전에)
+        driver.execute_script("""
+            return new Promise((resolve) => {
+                if (typeof(tinymce) !== 'undefined' && tinymce.activeEditor && tinymce.activeEditor.initialized) {
+                    resolve(true);
+                } else {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        setTimeout(() => resolve(true), 1000);
+                    });
+                }
+            });
+        """)
 
         # iframe 실패 시에만 JS로 TinyMCE fallback 시도
         if not iframe_success:
             try:
                 print("🔁 JS 기반 TinyMCE 설정 시도 (fallback)")
                 driver.execute_script("""
+                    const content = '자동화 테스트 게시글입니다.';
                     if (typeof(tinymce) !== 'undefined' && tinymce.activeEditor) {
-                        tinymce.activeEditor.setContent('자동화 테스트 게시글입니다.');
+                        tinymce.activeEditor.setContent(content);
                         tinymce.activeEditor.focus();
-                        tinymce.activeEditor.save();
+                        tinymce.activeEditor.selection.select(tinymce.activeEditor.getBody(), true);
+                        tinymce.activeEditor.selection.collapse(false);
+                        tinymce.activeEditor.getDoc().dispatchEvent(new Event('input', { bubbles: true }));
                         tinymce.activeEditor.getBody().dispatchEvent(new Event('input', { bubbles: true }));
+                        tinymce.activeEditor.save();  // textarea에 반영
+                        document.getElementById('id_content').dispatchEvent(new Event('input', { bubbles: true }));
                         document.getElementById('id_content').dispatchEvent(new Event('change', { bubbles: true }));
                     } else {
                         const textarea = document.getElementById('id_content');
-                        textarea.value = '자동화 테스트 게시글입니다.';
+                        textarea.value = content;
                         textarea.dispatchEvent(new Event('input', { bubbles: true }));
                         textarea.dispatchEvent(new Event('change', { bubbles: true }));
                     }
@@ -190,6 +207,7 @@ def prepare_and_post(board_name, title):
                 time.sleep(1)
             except Exception as js_e:
                 print(f"⚠️ JS fallback 실패: {js_e}")
+
 
 
         # 서버 기준 목표 제출 시간 (예: 한국 시간 13:00 == UTC 04:00)
@@ -204,7 +222,15 @@ def prepare_and_post(board_name, title):
 
         # 서버 시간 기준 목표 시각까지 보정 대기
         wait_until_server_target_time(target_utc_time)
-        
+
+        #글 등록 직전 상태 확인하기
+        driver.save_screenshot(f"final_debug_{board_name}.png")
+        with open(f"final_source_{board_name}.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+        # 제출 직전 textarea에 값이 제대로 들어갔는지 확인
+        content_value = driver.execute_script("return document.getElementById('id_content').value;")
+        print(f"🧾 제출 직전 textarea 값 확인: {content_value}")
+
         # 제출 버튼 클릭
         try:
             submit_btn = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "id_submitbutton")))
@@ -221,7 +247,14 @@ def prepare_and_post(board_name, title):
             with open(f"submit_fail_page_source_{board_name}.html", "w", encoding="utf-8") as f:
                 f.write(driver.page_source)
 
-        print(f"✅ 게시 완료: {board_name} / {title}")
+        # ✅ 여기에 5번 코드 넣기!
+        time.sleep(2)
+        current_url = driver.current_url
+        print("📄 현재 URL:", current_url)
+        if "view.php" in current_url or "게시글이 등록되었습니다" in driver.page_source:
+            print(f"✅ 실제 등록 성공 - {board_name} / {title}")
+        else:
+            print(f"⚠️ 등록 실패 가능성 있음 - {board_name} / {title}")
         
         # 제출 후 URL 및 결과 페이지 저장
         time.sleep(2)
