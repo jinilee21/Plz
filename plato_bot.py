@@ -146,20 +146,42 @@ def prepare_and_post(board_name, title):
         # 제목도 JS로 직접 설정 (선택 사항)
         driver.execute_script(f"document.getElementById('id_subject').value = '{title}'")
 
-       ## 본문 입력 처리 부분
+      # 본문 입력 처리 강화
+              # 본문 입력 처리
+        iframe_success = False
         try:
-            iframe = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[id^='id_content_ifr']")))
+            iframe = WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[id^='id_content_ifr']"))
+            )
+            time.sleep(2)
             driver.switch_to.frame(iframe)
-            body = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "tinymce")))
+
+            body = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "tinymce"))
+            )
+            time.sleep(1)
             body.clear()
             body.send_keys("자동화 테스트 게시글입니다.")
-            time.sleep(1)
-            driver.switch_to.default_content()
+            iframe_success = True
+            print("📝 본문 입력 성공 (iframe 경로)")
         except Exception as e:
-            print(f"❌ 본문 입력 오류 - {board_name}: {e}")
-            raise
+            print(f"❌ 본문 iframe 입력 실패 - {board_name}: {e}")
+        finally:
+            driver.switch_to.default_content()
 
-        
+        # iframe 실패 시에만 JS로 TinyMCE fallback 시도
+        if not iframe_success:
+            try:
+                print("🔁 JS 기반 TinyMCE 설정 시도 (fallback)")
+                driver.execute_script("""
+                    if (typeof(tinymce) !== 'undefined') {
+                        tinymce.activeEditor.setContent('자동화 테스트 게시글입니다.');
+                    } else {
+                        document.getElementById('id_content').value = '자동화 테스트 게시글입니다.';
+                    }
+                """)
+            except Exception as js_e:
+                print(f"⚠️ JS로도 본문 설정 실패: {js_e}")
 
         # 서버 기준 목표 제출 시간 (예: 한국 시간 13:00 == UTC 04:00)
         #target_utc_time = datetime.combine(
@@ -177,19 +199,18 @@ def prepare_and_post(board_name, title):
         # 제출 버튼 클릭
         try:
             submit_btn = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, "id_submitbutton")))
-            driver.execute_script("arguments[0].click();", submit_btn)
+            if submit_btn.is_displayed():
+                driver.execute_script("arguments[0].click();", submit_btn)
+            else:
+                raise Exception("❌ 제출 버튼이 표시되지 않음")
         except UnexpectedAlertPresentException:
             alert = Alert(driver)
             print(f"⚠️ 제출 중 경고창 발생: {alert.text}")
             alert.accept()
         except Exception as e:
             print(f"⚠️ 제출 버튼 예외: {e}")
-            # 혹시 모를 열린 alert 닫기
-            try:
-                alert = Alert(driver)
-                alert.accept()
-            except:
-                pass
+            with open(f"submit_fail_page_source_{board_name}.html", "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
 
         print(f"✅ 게시 완료: {board_name} / {title}")
         
