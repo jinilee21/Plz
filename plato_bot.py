@@ -176,12 +176,16 @@ def prepare_and_post(board_name, title):
                 driver.execute_script("""
                     if (typeof(tinymce) !== 'undefined') {
                         tinymce.activeEditor.setContent('자동화 테스트 게시글입니다.');
+                        tinymce.activeEditor.save();  // 🔑 textarea에 반영
                     } else {
                         document.getElementById('id_content').value = '자동화 테스트 게시글입니다.';
                     }
                 """)
             except Exception as js_e:
                 print(f"⚠️ JS로도 본문 설정 실패: {js_e}")
+                # 실제 값 확인 (선택적 로그)
+                content_value = driver.execute_script("return document.getElementById('id_content').value;")
+                print(f"📋 본문 최종 내용 (textarea): {content_value}")
 
         # 서버 기준 목표 제출 시간 (예: 한국 시간 13:00 == UTC 04:00)
         #target_utc_time = datetime.combine(
