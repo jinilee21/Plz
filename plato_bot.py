@@ -143,43 +143,38 @@ def prepare_and_post(board_name, title):
         driver.execute_script("arguments[0].scrollIntoView(true);", write_btn)
         driver.execute_script("arguments[0].click();", write_btn)
 
-        # 제목도 JS로 직접 설정 (선택 사항)
-        driver.execute_script(f"document.getElementById('id_subject').value = '{title}'")
+        # 제목 입력
+        driver.execute_script(f"""
+            const subjectInput = document.getElementById('id_subject');
+            subjectInput.value = `{title}`;
+            subjectInput.dispatchEvent(new Event('input', {{ bubbles: true }}));
+            subjectInput.dispatchEvent(new Event('change', {{ bubbles: true }}));
+        """)
+        # 디버깅용 확인
+        subject_value = driver.execute_script("return document.getElementById('id_subject').value;")
+        print(f"📝 제목 확인: {subject_value}")
+
 
       # 본문 입력 처리 강화
-              # 본문 입력 처리
         iframe_success = False
-        try:
-            iframe = WebDriverWait(driver, 15).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[id^='id_content_ifr']"))
-            )
-            time.sleep(2)
-            driver.switch_to.frame(iframe)
+        for _ in range(3):
+            try:
+                iframe = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[id^='id_content_ifr']"))
+                )
+                driver.switch_to.frame(iframe)
+                body = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.ID, "tinymce")))
+                body.clear()
+                body.send_keys("자동화 테스트 게시글입니다.")
+                iframe_success = True
+                print("📝 본문 입력 성공 (iframe 경로)")
+                break
+            except Exception as e:
+                print(f"⚠️ iframe 시도 실패, 재시도 중...: {e}")
+                time.sleep(2)
+        driver.switch_to.default_content()
+        time.sleep(2)  # TinyMCE 로딩 대기
 
-            body = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.ID, "tinymce"))
-            )
-            time.sleep(1)
-            body.clear()
-            body.send_keys("자동화 테스트 게시글입니다.")
-            iframe_success = True
-            print("📝 본문 입력 성공 (iframe 경로)")
-        except Exception as e:
-            print(f"❌ 본문 iframe 입력 실패 - {board_name}: {e}")
-        finally:
-            driver.switch_to.default_content()
-        # TinyMCE 에디터 로딩 대기 (fallback 전에)
-        driver.execute_script("""
-            return new Promise((resolve) => {
-                if (typeof(tinymce) !== 'undefined' && tinymce.activeEditor && tinymce.activeEditor.initialized) {
-                    resolve(true);
-                } else {
-                    document.addEventListener('DOMContentLoaded', () => {
-                        setTimeout(() => resolve(true), 1000);
-                    });
-                }
-            });
-        """)
 
         # iframe 실패 시에만 JS로 TinyMCE fallback 시도
         if not iframe_success:
@@ -194,7 +189,7 @@ def prepare_and_post(board_name, title):
                         tinymce.activeEditor.selection.collapse(false);
                         tinymce.activeEditor.getDoc().dispatchEvent(new Event('input', { bubbles: true }));
                         tinymce.activeEditor.getBody().dispatchEvent(new Event('input', { bubbles: true }));
-                        tinymce.activeEditor.save();  // textarea에 반영
+                        tinymce.activeEditor.save();
                         document.getElementById('id_content').dispatchEvent(new Event('input', { bubbles: true }));
                         document.getElementById('id_content').dispatchEvent(new Event('change', { bubbles: true }));
                     } else {
@@ -207,6 +202,9 @@ def prepare_and_post(board_name, title):
                 time.sleep(1)
             except Exception as js_e:
                 print(f"⚠️ JS fallback 실패: {js_e}")
+                content_value_check = driver.execute_script("return document.getElementById('id_content').value;")
+                print(f"🧾 fallback 이후 textarea 값 확인: {content_value_check}")
+
 
 
 
@@ -261,7 +259,7 @@ def prepare_and_post(board_name, title):
         print("📄 현재 URL:", driver.current_url)
         with open(f"post_result_{board_name}.html", "w", encoding="utf-8") as f:
             f.write(driver.page_source)
-            
+
     except Exception as e:
         print(f"❌ 오류 발생 - {board_name}: {e}")
         driver.save_screenshot(f"error_{board_name}.png")
