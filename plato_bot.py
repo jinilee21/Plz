@@ -254,48 +254,42 @@ for board_name, title in titles_today:
         unique_titles_today.append((board_name, title))
 
 
-# ----------------------------
-# 매일 13시 KST 자동 실행 루프
-# ----------------------------
-def daily_scheduler():
-    while True:
-        try:
-            korea_time = datetime.now(pytz.timezone("Asia/Seoul"))
-            today_13_kst = korea_time.replace(hour=13, minute=0, second=0, microsecond=0)
-            if korea_time >= today_13_kst:
-                today_13_kst += timedelta(days=1)
+def daily_once():
+    # 한국 시간 기준 오늘 13시
+    korea_now = datetime.now(pytz.timezone("Asia/Seoul"))
+    target_korea_time = korea_now.replace(hour=13, minute=0, second=0, microsecond=0)
 
-            target_utc_time = today_13_kst.astimezone(pytz.utc)
-            print(f"\n🕒 오늘 {today_13_kst.strftime('%Y-%m-%d %H:%M:%S')} KST 예약 시작 대기 중...")
-            wait_until_server_target_time(target_utc_time)
+    # 이미 13시가 지난 경우 스킵
+    if korea_now > target_korea_time:
+        print("🕐 이미 13시가 지나 실행하지 않음")
+        return
 
-            weekday = today_13_kst.strftime("%A")
-            day_titles = title_map.get(weekday, [])
-            seen = set()
-            unique_titles = []
-            for b, t in day_titles:
-                if (b, t) not in seen:
-                    seen.add((b, t))
-                    unique_titles.append((b, t))
+    # UTC로 변환 후 대기
+    target_utc_time = target_korea_time.astimezone(pytz.utc)
+    wait_until_server_target_time(target_utc_time)
 
-            threads = []
-            for board_name, title in unique_titles:
-                t = threading.Thread(target=prepare_and_post, args=(board_name, title))
-                t.start()
-                threads.append(t)
-            for t in threads:
-                t.join()
+    # 오늘 요일에 해당하는 게시글 처리
+    today_weekday = target_korea_time.strftime("%A")
+    posts = title_map.get(today_weekday, [])
 
-            print("😴 오늘 작업 완료. 다음 예약 시간까지 대기...")
-            time.sleep(60 * 60 * 12)
+    seen = set()
+    unique_posts = []
+    for board, title in posts:
+        if (board, title) not in seen:
+            seen.add((board, title))
+            unique_posts.append((board, title))
 
-        except Exception as e:
-            print(f"❌ 스케줄러 오류: {e}")
-            time.sleep(60)
+    threads = []
+    for board, title in unique_posts:
+        t = threading.Thread(target=prepare_and_post, args=(board, title))
+        t.start()
+        threads.append(t)
 
-# ----------------------------
-# 엔트리포인트
-# ----------------------------
+    for t in threads:
+        t.join()
+
+# 실행 엔트리포인트
 if __name__ == "__main__":
-    daily_scheduler()
+    daily_once()
+
 
